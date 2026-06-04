@@ -1206,6 +1206,18 @@ String getDashboardSectionHTML() {
   html += "</div>";
   html += "</div>";
 
+  // Sensor Health Card
+  html += "<div class='status-card' id='sensorHealthCard'>";
+  html += "<div class='status-card-top' style='border-top: 4px solid #1b6b3d;'></div>";
+  html += "<div class='status-card-title'>Sensor Health</div>";
+  html += "<div style='display:grid;gap:12px;font-size:14px;color:#333;'>";
+  html += "<div id='soilHealthStatus' style='font-weight:600;'>&#128994; Soil Sensor Normal</div>";
+  html += "<div id='rainHealthStatus' style='font-weight:600;'>&#128994; Rain Sensor Normal</div>";
+  html += "<div id='autoDisabledWarning' style='display:none;padding:10px;border-radius:8px;background:#fee2e2;color:#991b1b;font-weight:600;'>Automatic Watering Disabled</div>";
+  html += "<button class='red' onclick=\"resetSensorFault()\" style='padding:12px;border-radius:8px;font-size:13px;'>Reset Sensor Fault</button>";
+  html += "</div>";
+  html += "</div>";
+
   html += "</div>";
 
   // Control Section
@@ -1246,6 +1258,20 @@ String getDashboardSectionHTML() {
   html += "<div class='control-status'>";
   html += "<div class='control-status-label'>Status Pompa</div>";
   html += "<div class='control-status-value' id='pumpState'>STATUS: MATI</div>";
+  html += "</div>";
+  html += "<div style='display:grid;gap:10px;margin-top:4px;'>";
+  html += "<div style='font-size:13px;font-weight:600;color:#1b6b3d;'>Manual Pump Timer</div>";
+  html += "<div class='form-group' style='gap:6px;'>";
+  html += "<label for='pumpTimerDuration' style='font-size:12px;color:#666;'>Durasi (detik)</label>";
+  html += "<input id='pumpTimerDuration' type='number' min='1' max='60' value='60'>";
+  html += "</div>";
+  html += "<button class='blue' onclick='startPumpTimer()' style='padding:12px;border-radius:8px;font-size:13px;'>Start Timer</button>";
+  html += "<div class='control-status' style='margin-top:0;'>";
+  html += "<div class='control-status-label'>Timer Status</div>";
+  html += "<div class='control-status-value' id='pumpTimerStatus'>Inactive</div>";
+  html += "<div class='control-status-label' style='margin-top:8px;'>Countdown</div>";
+  html += "<div class='control-status-value' id='pumpTimerCountdown'>00:00</div>";
+  html += "</div>";
   html += "</div>";
   html += "</div>";
 
@@ -1597,6 +1623,36 @@ function getSoilIcon(status) {
           if (percent) percent.style.borderColor = rainStatus === 'RAINING' ? '#2563eb' : '#1b6b3d';
         }
 
+    // Update sensor health and manual pump timer from AJAX status.
+    const soilHealthEl = document.getElementById('soilHealthStatus');
+    const rainHealthEl = document.getElementById('rainHealthStatus');
+    const autoWarningEl = document.getElementById('autoDisabledWarning');
+    if (soilHealthEl) {
+      soilHealthEl.innerHTML = data.soilSensorFault
+        ? '&#128308; Soil Sensor Fault'
+        : '&#128994; Soil Sensor Normal';
+      soilHealthEl.style.color = data.soilSensorFault ? '#991b1b' : '#1b6b3d';
+    }
+    if (rainHealthEl) {
+      rainHealthEl.innerHTML = data.rainSensorFault
+        ? '&#128308; Rain Sensor Fault'
+        : '&#128994; Rain Sensor Normal';
+      rainHealthEl.style.color = data.rainSensorFault ? '#991b1b' : '#1b6b3d';
+    }
+    if (autoWarningEl) {
+      autoWarningEl.style.display = data.soilSensorFault ? 'block' : 'none';
+    }
+
+    const timerStatusEl = document.getElementById('pumpTimerStatus');
+    const timerCountdownEl = document.getElementById('pumpTimerCountdown');
+    if (timerStatusEl) {
+      timerStatusEl.textContent = data.pumpTimerActive ? 'Active' : 'Inactive';
+      timerStatusEl.style.color = data.pumpTimerActive ? '#1b6b3d' : '#666';
+    }
+    if (timerCountdownEl) {
+      timerCountdownEl.textContent = formatCountdown(data.pumpTimeRemaining || 0);
+    }
+
     // Update actuators
     document.getElementById('pumpState').textContent = 'STATUS: ' + (data.pumpState || 'MATI');
     document.getElementById('jemuranState').textContent = 'POSISI: ' + (data.jemuranState || 'KELUAR');
@@ -1645,6 +1701,30 @@ async function sendCommand(url) {
     fetchStatus();
   } catch (error) {
     console.log(error);
+  }
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return minutes + ':' + seconds;
+}
+
+async function startPumpTimer() {
+  const input = document.getElementById('pumpTimerDuration');
+  const duration = Math.max(1, Math.min(60, parseInt(input?.value || '60', 10)));
+  await sendCommand('/pump/on?duration=' + duration);
+}
+
+async function resetSensorFault() {
+  try {
+    const response = await fetch('/sensor/reset', { method: 'GET' });
+    const text = await response.text();
+    alert(text);
+    fetchStatus();
+  } catch (error) {
+    alert('Error: ' + error);
   }
 }
 

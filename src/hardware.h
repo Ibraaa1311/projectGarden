@@ -14,6 +14,7 @@
 // Nilai mentah sensor
 extern int soilValue;
 extern int rainValue;
+extern int rainDigitalValue;
 
 // Persentase sensor (0 - 100)
 extern int soilPercent;
@@ -29,6 +30,10 @@ extern String jemuranState;    // IN / OUT
 
 // Mode sistem
 extern bool manualMode;        // true = MANUAL, false = AUTO
+extern bool soilSensorFault;
+extern bool rainSensorFault;
+extern bool pumpTimerActive;
+extern unsigned long pumpTimeRemaining;
 
 // ======================================================
 // SETUP & UPDATE
@@ -53,12 +58,19 @@ void calculatePercentages();
 // Menentukan status DRY/WET dan RAINING/CLEAR
 void updateSensorStatus();
 
+// Memantau kesehatan sensor dan kondisi fail-safe
+void updateSensorHealth();
+
 // ======================================================
 // ACTUATOR FUNCTIONS
 // ======================================================
 
 // Kontrol pompa
 void setPump(bool on);
+void startManualPumpTimer(unsigned long durationMs);
+void cancelManualPumpTimer();
+void updatePumpFailsafe();
+void resetSensorFaults();
 
 // Kontrol jemuran
 void setJemuranIn();

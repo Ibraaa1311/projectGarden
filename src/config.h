@@ -18,6 +18,7 @@
 // ======================================================
 #define SOIL_PIN       34   // Analog input soil moisture
 #define RAIN_PIN       35   // Analog input rain sensor
+#define RAIN_DO_PIN    32   // Digital output rain sensor
 #define RELAY_PUMP     26   // Relay pompa
 #define SERVO_PIN      25   // Servo jemuran
 
@@ -40,6 +41,10 @@
 // TIMING
 // ======================================================
 #define SENSOR_READ_INTERVAL 2000UL   // 2 detik
+#define SENSOR_FAULT_TIME 30000UL     // 30 detik
+#define SOIL_NO_CHANGE_TIME 60000UL   // 60 detik
+#define MAX_PUMP_RUNTIME 60000UL      // 60 detik
+#define DEFAULT_MANUAL_PUMP_TIME 60000UL
 
 // ======================================================
 // ACCESS POINT CONFIGURATION
@@ -78,6 +83,7 @@
 // LOW  = OFF
 #define PUMP_ON_LEVEL  HIGH
 #define PUMP_OFF_LEVEL LOW
+#define RAIN_DO_RAIN_LEVEL LOW
 
 // Posisi servo
 #define SERVO_IN_ANGLE   0     // Jemuran masuk
