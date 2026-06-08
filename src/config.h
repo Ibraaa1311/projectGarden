@@ -45,6 +45,8 @@
 #define SOIL_NO_CHANGE_TIME 60000UL   // 60 detik
 #define MAX_PUMP_RUNTIME 60000UL      // 60 detik
 #define DEFAULT_MANUAL_PUMP_TIME 60000UL
+#define RAIN_CONFLICT_WET_PERCENT 70
+#define RAIN_CONFLICT_DRY_PERCENT 30
 
 // ======================================================
 // ACCESS POINT CONFIGURATION

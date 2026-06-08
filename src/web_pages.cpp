@@ -493,6 +493,21 @@ body {
   gap: 18px;
 }
 
+.mode-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+}
+
+.mode-card-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
 .control-title {
   display: flex;
   align-items: center;
@@ -882,6 +897,10 @@ tr:hover {
     grid-template-columns: 1fr;
   }
 
+  .mode-card-content {
+    grid-template-columns: 1fr;
+  }
+
   .control-card {
     padding: 18px;
   }
@@ -1259,8 +1278,12 @@ String getDashboardSectionHTML() {
   html += "<div class='control-status-label'>Status Pompa</div>";
   html += "<div class='control-status-value' id='pumpState'>STATUS: MATI</div>";
   html += "</div>";
+  html += "</div>";
+
+  html += "<div class='control-card'>";
+  html += "<div class='control-title' style='color:#1b6b3d;'>";
+  html += "Manual Pump Timer</div>";
   html += "<div style='display:grid;gap:10px;margin-top:4px;'>";
-  html += "<div style='font-size:13px;font-weight:600;color:#1b6b3d;'>Manual Pump Timer</div>";
   html += "<div class='form-group' style='gap:6px;'>";
   html += "<label for='pumpTimerDuration' style='font-size:12px;color:#666;'>Durasi (detik)</label>";
   html += "<input id='pumpTimerDuration' type='number' min='1' max='60' value='60'>";
@@ -1275,12 +1298,16 @@ String getDashboardSectionHTML() {
   html += "</div>";
   html += "</div>";
 
-  // ── Mode Operasi card: title → button → modeLabel → description ──
-  html += "<div class='control-card'>";
+  html += "</div>"; // end control-grid
+
+  // Mode Operasi full-width seperti layout dashboard ringkas.
+  html += "<div class='mode-card'>";
 
   // Title
   html += "<div class='control-title' style='color:#1b6b3d;'>";
   html += "Mode Operasi</div>";
+
+  html += "<div class='mode-card-content'>";
 
   // Mode label badge
   html += "<div id='modeBadge' style='display:flex;align-items:center;justify-content:center;gap:8px;"
@@ -1303,9 +1330,8 @@ String getDashboardSectionHTML() {
   html += "<p id='modeDesc' style='font-size:13px;color:#666;text-align:center;line-height:1.5;'>"
           "Sistem mengatur pompa dan jemuran secara otomatis berdasarkan sensor.</p>";
 
+  html += "</div>"; // end mode-card-content
   html += "</div>"; // end Mode Operasi card
-
-  html += "</div>"; // end control-grid
 
   // ── Informasi Sistem: full width di bawah control-grid ──
   html += "<div style='margin-top:20px; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 2px 8px rgba(0,0,0,0.06);'>";

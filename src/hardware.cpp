@@ -85,13 +85,13 @@ void hardwareUpdate() {
   // 3. Update status
   updateSensorStatus();
 
-  // 4. Pantau kesehatan sensor sebelum otomatisasi berjalan
-  updateSensorHealth();
-
-  // 5. Jalankan otomatisasi jika AUTO mode
+  // 4. Jalankan otomatisasi jika AUTO mode
   if (!manualMode) {
     runAutomation();
   }
+
+  // 5. Pantau kesehatan sensor berdasarkan kondisi aktuator terbaru
+  updateSensorHealth();
 
   // 6. Pantau timer manual dan batas maksimum pompa
   updatePumpFailsafe();
@@ -192,18 +192,24 @@ void updateSensorHealth() {
     autoPumpNoChangeStart = 0;
   }
 
-  // Rain fault: nilai AO ekstrem terus menerus selama 30 detik.
-  bool rainExtreme = (rainValue <= 5 || rainValue >= 4090);
+  bool rainDoRaining = (rainDigitalValue == RAIN_DO_RAIN_LEVEL);
+
+  // Rain fault: nilai AO ekstrem hanya dianggap fault jika berlawanan
+  // dengan DO, agar kondisi clear normal di nilai ADC tinggi tidak false alarm.
+  bool rainExtreme = (rainValue <= 5 && !rainDoRaining) ||
+                     (rainValue >= 4090 && rainDoRaining);
   if (rainExtreme) {
     if (rainExtremeStart == 0) rainExtremeStart = now;
   } else {
     rainExtremeStart = 0;
   }
 
-  // Rain fault: AO dan DO bertentangan terus menerus selama 30 detik.
-  bool rainAoRaining = (rainValue <= RAIN_THRESHOLD);
-  bool rainDoRaining = (rainDigitalValue == RAIN_DO_RAIN_LEVEL);
-  bool rainConflict = (rainAoRaining != rainDoRaining);
+  // Rain fault: AO dan DO bertentangan saat AO jelas basah/kering.
+  // Area tengah diabaikan agar noise analog tidak mudah menjadi fault.
+  bool rainAoRaining = (rainPercent >= RAIN_CONFLICT_WET_PERCENT);
+  bool rainAoClear = (rainPercent <= RAIN_CONFLICT_DRY_PERCENT);
+  bool rainConflict = (rainAoRaining && !rainDoRaining) ||
+                      (rainAoClear && rainDoRaining);
   if (rainConflict) {
     if (rainConflictStart == 0) rainConflictStart = now;
   } else {
