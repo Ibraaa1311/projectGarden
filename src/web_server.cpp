@@ -81,6 +81,7 @@ void webServerSetup() {
   server.on("/jemur/in", HTTP_GET, handleJemurIn);
   server.on("/jemur/out", HTTP_GET, handleJemurOut);
   server.on("/auto", HTTP_GET, handleAutoMode);
+  server.on("/sensor/reset", HTTP_GET, handleSensorReset);
 
   // WiFi
   server.on("/savewifi", HTTP_POST, handleSaveWiFi);
@@ -170,6 +171,9 @@ static String getUptimeString() {
 void handleApiStatus() {
   if (!requireAuth()) return;
 
+  // Perbarui countdown timer dan pump timeout sebelum status dikirim.
+  updatePumpFailsafe();
+
   String json = "{";
   json += "\"soilValue\":" + String(soilValue) + ",";
   json += "\"soilPercent\":" + String(soilPercent) + ",";
@@ -184,6 +188,16 @@ void handleApiStatus() {
   json += ",";
   json += "\"pumpTimeRemaining\":" + String(getPumpTimeRemaining()) + ",";
   json += "\"uptime\":\"" + getUptimeString() + "\",";
+  json += "\"soilSensorFault\":";
+  json += (soilSensorFault ? "true" : "false");
+  json += ",";
+  json += "\"rainSensorFault\":";
+  json += (rainSensorFault ? "true" : "false");
+  json += ",";
+  json += "\"pumpTimerActive\":";
+  json += (pumpTimerActive ? "true" : "false");
+  json += ",";
+  json += "\"pumpTimeRemaining\":" + String(pumpTimeRemaining) + ",";
   json += "\"manualMode\":";
   json += (manualMode ? "true" : "false");
   json += "}";
@@ -210,8 +224,12 @@ void handleApiNetworks() {
 void handlePumpOn() {
   if (!requireAuth()) return;
 
-  setManualMode();
-  setPump(true);
+  unsigned long durationMs = DEFAULT_MANUAL_PUMP_TIME;
+  if (server.hasArg("duration")) {
+    durationMs = server.arg("duration").toInt() * 1000UL;
+  }
+
+  startManualPumpTimer(durationMs);
 
   unsigned long durationMinutes = server.arg("duration").toInt();
   if (durationMinutes > 0) {
@@ -257,6 +275,14 @@ void handleAutoMode() {
   setAutoMode();
 
   sendText("Auto Mode Enabled");
+}
+
+void handleSensorReset() {
+  if (!requireAuth()) return;
+
+  resetSensorFaults();
+
+  sendText("Sensor fault berhasil direset.");
 }
 
 // ======================================================

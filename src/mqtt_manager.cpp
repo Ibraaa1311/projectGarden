@@ -32,6 +32,12 @@ const char* TOPIC_SOIL_STATE =
 const char* TOPIC_RAIN_STATE =
   "smarthome/pagi/taman/hujan/state";
 
+const char* TOPIC_SOIL_FAULT =
+  "smarthome/pagi/taman/tanah/fault";
+
+const char* TOPIC_RAIN_FAULT =
+  "smarthome/pagi/taman/hujan/fault";
+
 // ACTUATOR STATE
 const char* TOPIC_PUMP_STATE =
   "smarthome/pagi/taman/pompa/state";
@@ -48,6 +54,9 @@ const char* TOPIC_JEMURAN_SET =
 
 const char* TOPIC_FIRE_STATE =
   "smarthome/dapur/api/state";
+
+static String lastSoilFaultPayload = "";
+static String lastRainFaultPayload = "";
 
 // ========================================
 // MQTT CALLBACK
@@ -247,6 +256,32 @@ void mqttPublishStatus() {
     jemuranState.c_str(),
     true
   );
+
+  // ====================================
+  // SENSOR FAULT STATUS
+  // ====================================
+  String soilFaultPayload =
+    soilSensorFault ? "FAULT" : "NORMAL";
+  String rainFaultPayload =
+    rainSensorFault ? "FAULT" : "NORMAL";
+
+  if (soilFaultPayload != lastSoilFaultPayload) {
+    mqttClient.publish(
+      TOPIC_SOIL_FAULT,
+      soilFaultPayload.c_str(),
+      true
+    );
+    lastSoilFaultPayload = soilFaultPayload;
+  }
+
+  if (rainFaultPayload != lastRainFaultPayload) {
+    mqttClient.publish(
+      TOPIC_RAIN_FAULT,
+      rainFaultPayload.c_str(),
+      true
+    );
+    lastRainFaultPayload = rainFaultPayload;
+  }
 
   Serial.println("MQTT Status Published");
 

@@ -14,6 +14,7 @@
 // Nilai mentah sensor
 int soilValue = 0;
 int rainValue = 0;
+int rainDigitalValue = HIGH;
 
 // Persentase sensor
 int soilPercent = 0;
@@ -30,15 +31,35 @@ String jemuranState = STATUS_OUT;
 // Mode sistem
 bool manualMode = false;
 
+<<<<<<< HEAD
 // Timer pompa manual
 bool pumpTimerActive = false;
 unsigned long pumpTimerStart = 0;
 unsigned long pumpTimerDuration = 0;
+=======
+// Status kesehatan sensor dan timer pompa manual
+bool soilSensorFault = false;
+bool rainSensorFault = false;
+bool pumpTimerActive = false;
+unsigned long pumpTimeRemaining = 0;
+>>>>>>> a6d1efa920e4711422b68c749da119a0f40c5e59
 
 // Object servo
 Servo jemuran;
 
+<<<<<<< HEAD
 static void updatePumpTimer();
+=======
+// Timer internal untuk deteksi fault dan fail-safe pompa
+static unsigned long soilExtremeStart = 0;
+static unsigned long rainExtremeStart = 0;
+static unsigned long rainConflictStart = 0;
+static unsigned long autoPumpNoChangeStart = 0;
+static unsigned long pumpStartedAt = 0;
+static unsigned long manualPumpTimerEnd = 0;
+static int autoPumpStartPercent = 0;
+static bool autoPumpTracking = false;
+>>>>>>> a6d1efa920e4711422b68c749da119a0f40c5e59
 
 // ======================================================
 // SETUP HARDWARE
@@ -47,6 +68,9 @@ void hardwareSetup() {
   // Relay pompa
   pinMode(RELAY_PUMP, OUTPUT);
   digitalWrite(RELAY_PUMP, PUMP_OFF_LEVEL);
+
+  // Digital output rain sensor
+  pinMode(RAIN_DO_PIN, INPUT);
 
   // Servo jemuran
   jemuran.setPeriodHertz(50);
@@ -78,6 +102,12 @@ void hardwareUpdate() {
   } else {
     updatePumpTimer();
   }
+
+  // 5. Pantau kesehatan sensor berdasarkan kondisi aktuator terbaru
+  updateSensorHealth();
+
+  // 6. Pantau timer manual dan batas maksimum pompa
+  updatePumpFailsafe();
 }
 
 // ======================================================
@@ -86,6 +116,7 @@ void hardwareUpdate() {
 void readSensors() {
   soilValue = analogRead(SOIL_PIN);
   rainValue = analogRead(RAIN_PIN);
+  rainDigitalValue = digitalRead(RAIN_DO_PIN);
 }
 
 // ======================================================
@@ -130,11 +161,139 @@ void updateSensorStatus() {
 }
 
 // ======================================================
+// SENSOR HEALTH MONITORING
+// ======================================================
+void updateSensorHealth() {
+  unsigned long now = millis();
+
+  // Soil fault: nilai ADC ekstrem terus menerus selama 30 detik.
+  bool soilExtreme = (soilValue <= 5 || soilValue >= 4090);
+  if (soilExtreme) {
+    if (soilExtremeStart == 0) soilExtremeStart = now;
+    if (!soilSensorFault &&
+        now - soilExtremeStart >= SENSOR_FAULT_TIME) {
+      soilSensorFault = true;
+      setPump(false);
+      Serial.println("FAILSAFE: Soil Sensor Fault Detected");
+    }
+  } else {
+    soilExtremeStart = 0;
+  }
+
+  // Soil fault: pompa otomatis ON tetapi kelembapan tidak berubah > 3%.
+  bool autoPumpOn = (!manualMode && pumpState == STATUS_ON);
+  if (autoPumpOn) {
+    if (!autoPumpTracking) {
+      autoPumpTracking = true;
+      autoPumpNoChangeStart = now;
+      autoPumpStartPercent = soilPercent;
+    }
+
+    if (abs(soilPercent - autoPumpStartPercent) > 3) {
+      autoPumpNoChangeStart = now;
+      autoPumpStartPercent = soilPercent;
+    }
+
+    if (!soilSensorFault &&
+        now - autoPumpNoChangeStart >= SOIL_NO_CHANGE_TIME) {
+      soilSensorFault = true;
+      setPump(false);
+      Serial.println("FAILSAFE: Soil Sensor Fault Detected");
+    }
+  } else {
+    autoPumpTracking = false;
+    autoPumpNoChangeStart = 0;
+  }
+
+  bool rainDoRaining = (rainDigitalValue == RAIN_DO_RAIN_LEVEL);
+
+  // Rain fault: nilai AO ekstrem hanya dianggap fault jika berlawanan
+  // dengan DO, agar kondisi clear normal di nilai ADC tinggi tidak false alarm.
+  bool rainExtreme = (rainValue <= 5 && !rainDoRaining) ||
+                     (rainValue >= 4090 && rainDoRaining);
+  if (rainExtreme) {
+    if (rainExtremeStart == 0) rainExtremeStart = now;
+  } else {
+    rainExtremeStart = 0;
+  }
+
+  // Rain fault: AO dan DO bertentangan saat AO jelas basah/kering.
+  // Area tengah diabaikan agar noise analog tidak mudah menjadi fault.
+  bool rainAoRaining = (rainPercent >= RAIN_CONFLICT_WET_PERCENT);
+  bool rainAoClear = (rainPercent <= RAIN_CONFLICT_DRY_PERCENT);
+  bool rainConflict = (rainAoRaining && !rainDoRaining) ||
+                      (rainAoClear && rainDoRaining);
+  if (rainConflict) {
+    if (rainConflictStart == 0) rainConflictStart = now;
+  } else {
+    rainConflictStart = 0;
+  }
+
+  if (!rainSensorFault &&
+      ((rainExtremeStart != 0 &&
+        now - rainExtremeStart >= SENSOR_FAULT_TIME) ||
+       (rainConflictStart != 0 &&
+        now - rainConflictStart >= SENSOR_FAULT_TIME))) {
+    rainSensorFault = true;
+    Serial.println("FAILSAFE: Rain Sensor Fault Detected");
+  }
+}
+
+// ======================================================
 // ACTUATOR CONTROL
 // ======================================================
 void setPump(bool on) {
   digitalWrite(RELAY_PUMP, on ? PUMP_ON_LEVEL : PUMP_OFF_LEVEL);
   pumpState = on ? STATUS_ON : STATUS_OFF;
+
+  // Catat awal pompa menyala untuk pump timeout.
+  if (on && pumpStartedAt == 0) {
+    pumpStartedAt = millis();
+  } else if (!on) {
+    pumpStartedAt = 0;
+    cancelManualPumpTimer();
+  }
+}
+
+void startManualPumpTimer(unsigned long durationMs) {
+  if (durationMs == 0) durationMs = DEFAULT_MANUAL_PUMP_TIME;
+
+  // Timer manual hanya mengatur durasi ON, kontrol manual tetap diizinkan.
+  setManualMode();
+  pumpTimerActive = true;
+  manualPumpTimerEnd = millis() + durationMs;
+  pumpTimeRemaining = durationMs;
+  setPump(true);
+}
+
+void cancelManualPumpTimer() {
+  pumpTimerActive = false;
+  pumpTimeRemaining = 0;
+  manualPumpTimerEnd = 0;
+}
+
+void updatePumpFailsafe() {
+  unsigned long now = millis();
+
+  // Countdown timer manual pompa.
+  if (pumpTimerActive) {
+    if (pumpState != STATUS_ON) {
+      cancelManualPumpTimer();
+    } else if ((long)(manualPumpTimerEnd - now) <= 0) {
+      setPump(false);
+      Serial.println("Manual Pump Timer Expired");
+    } else {
+      pumpTimeRemaining = manualPumpTimerEnd - now;
+    }
+  }
+
+  // Fail-safe maksimum runtime pompa untuk mode manual dan otomatis.
+  if (pumpState == STATUS_ON && pumpStartedAt != 0 &&
+      now - pumpStartedAt >= MAX_PUMP_RUNTIME) {
+    setPump(false);
+    setManualMode();
+    Serial.println("FAILSAFE: Pump Timeout");
+  }
 }
 
 void startPumpTimer(unsigned long durationSeconds) {
@@ -186,6 +345,7 @@ void setManualMode() {
 }
 
 void setAutoMode() {
+  cancelManualPumpTimer();
   manualMode = false;
   cancelPumpTimer();
 }
@@ -197,7 +357,10 @@ void runAutomation() {
   // Pompa:
   // Tanah kering -> ON
   // Tanah basah -> OFF
-  if (soilStatus == STATUS_DRY) {
+  // Auto watering dikunci saat soil sensor fault.
+  if (soilSensorFault) {
+    setPump(false);
+  } else if (soilStatus == STATUS_DRY) {
     setPump(true);
   } else {
     setPump(false);
@@ -213,6 +376,7 @@ void runAutomation() {
   }
 }
 
+<<<<<<< HEAD
 static void updatePumpTimer() {
   if (!pumpTimerActive) {
     return;
@@ -222,6 +386,17 @@ static void updatePumpTimer() {
     setPump(false);
     cancelPumpTimer();
   }
+=======
+void resetSensorFaults() {
+  // Reset fault manual dari dashboard.
+  soilSensorFault = false;
+  rainSensorFault = false;
+  soilExtremeStart = 0;
+  rainExtremeStart = 0;
+  rainConflictStart = 0;
+  autoPumpNoChangeStart = 0;
+  autoPumpTracking = false;
+>>>>>>> a6d1efa920e4711422b68c749da119a0f40c5e59
 }
 
 // ======================================================
@@ -264,4 +439,13 @@ void printSystemStatus() {
 
   Serial.print("Mode           : ");
   Serial.println(getModeString());
+<<<<<<< HEAD
+=======
+
+  Serial.print("Soil Fault     : ");
+  Serial.println(soilSensorFault ? "FAULT" : "NORMAL");
+
+  Serial.print("Rain Fault     : ");
+  Serial.println(rainSensorFault ? "FAULT" : "NORMAL");
+>>>>>>> a6d1efa920e4711422b68c749da119a0f40c5e59
 }
