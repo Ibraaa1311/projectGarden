@@ -558,6 +558,18 @@ button:disabled {
   color: #1b6b3d;
 }
 
+.timer-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.timer-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 28px;
+}
+
 /* ================= INFO BOX ================= */
 .info-box {
   background: #f0f8f4;
@@ -887,6 +899,10 @@ tr:hover {
   }
 
   .button-group {
+    grid-template-columns: 1fr;
+  }
+
+  .timer-info {
     grid-template-columns: 1fr;
   }
 
@@ -1234,7 +1250,7 @@ String getDashboardSectionHTML() {
   html += "<div class='control-title' style='color:#1b6b3d;'>";
   html += "Kontrol Pompa</div>";
   html += "<div class='button-group'>";
-  html += "<button class='green' onclick=\"sendCommand('/pump/on')\" style='display:flex;flex-direction:column;align-items:center;gap:8px;'>";
+  html += "<button class='green' onclick=\"sendPumpOn()\" style='display:flex;flex-direction:column;align-items:center;gap:8px;'>";
   html += getSvgIconPower();
   html += "<span style='font-size:12px; font-weight:500;'>POMPA NYALA</span>";
   html += "</button>";
@@ -1249,8 +1265,30 @@ String getDashboardSectionHTML() {
   html += "</div>";
   html += "</div>";
 
-  // ── Mode Operasi card: title → button → modeLabel → description ──
   html += "<div class='control-card'>";
+  html += "<div class='control-title' style='color:#1b6b3d;'>";
+  html += "Manual Pump Timer</div>";
+  html += "<div class='timer-grid'>";
+  html += "<label style='font-size:13px;font-weight:600;color:#333;'>Durasi Pompa(menit)</label>";
+  html += "<input type='number' id='pumpDuration' min='1' max='120' value='5' "
+          "style='width:100%;' aria-label='Durasi Pompa dalam menit'>";
+  html += "</div>";
+  html += "<div class='timer-info'>";
+  html += "<div class='control-status' style='margin-top:0;'>";
+  html += "<div class='control-status-label'>Timer Status</div>";
+  html += "<div class='control-status-value' id='pumpTimerStatus'>Inactive</div>";
+  html += "</div>";
+  html += "<div class='control-status' style='margin-top:0;'>";
+  html += "<div class='control-status-label'>Sisa Waktu</div>";
+  html += "<div class='control-status-value' id='pumpTimeRemaining'>00:00</div>";
+  html += "</div>";
+  html += "</div>";
+  html += "</div>";
+
+  html += "</div>"; // end control-grid
+
+  // ── Mode Operasi card: title → button → modeLabel → description ──
+  html += "<div class='control-card' style='margin-bottom:24px;'>";
 
   // Title
   html += "<div class='control-title' style='color:#1b6b3d;'>";
@@ -1278,8 +1316,6 @@ String getDashboardSectionHTML() {
           "Sistem mengatur pompa dan jemuran secara otomatis berdasarkan sensor.</p>";
 
   html += "</div>"; // end Mode Operasi card
-
-  html += "</div>"; // end control-grid
 
   // ── Informasi Sistem: full width di bawah control-grid ──
   html += "<div style='margin-top:20px; background:white; border-radius:12px; padding:20px 24px; box-shadow:0 2px 8px rgba(0,0,0,0.06);'>";
@@ -1538,6 +1574,14 @@ function getSoilIcon(status) {
       return `<svg viewBox="0 0 24 24" width="48" height="48" fill="#f59e0b" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>`;
     }
 
+    function formatTimer(seconds) {
+      const totalSeconds = Math.max(0, Number(seconds) || 0);
+      const minutes = Math.floor(totalSeconds / 60);
+      const remainingSeconds = totalSeconds % 60;
+      return String(minutes).padStart(2, '0') + ':' +
+             String(remainingSeconds).padStart(2, '0');
+    }
+
     async function fetchStatus() {
       try {
         const response = await fetch('/api/status');
@@ -1601,6 +1645,17 @@ function getSoilIcon(status) {
     document.getElementById('pumpState').textContent = 'STATUS: ' + (data.pumpState || 'MATI');
     document.getElementById('jemuranState').textContent = 'POSISI: ' + (data.jemuranState || 'KELUAR');
 
+    const timerStatusEl = document.getElementById('pumpTimerStatus');
+    const timerRemainingEl = document.getElementById('pumpTimeRemaining');
+    if (timerStatusEl) {
+      timerStatusEl.textContent = data.pumpTimerActive ? 'Active' : 'Inactive';
+      timerStatusEl.style.color = data.pumpTimerActive ? '#1b6b3d' : '#999';
+    }
+    if (timerRemainingEl) {
+      timerRemainingEl.textContent = formatTimer(data.pumpTimeRemaining || 0);
+      timerRemainingEl.style.color = data.pumpTimerActive ? '#1b6b3d' : '#999';
+    }
+
     // Update auto mode badge
     const isManual = data.manualMode;
     const modeBadge = document.getElementById('modeBadge');
@@ -1646,6 +1701,18 @@ async function sendCommand(url) {
   } catch (error) {
     console.log(error);
   }
+}
+
+async function sendPumpOn() {
+  const durationInput = document.getElementById('pumpDuration');
+  let duration = durationInput ? parseInt(durationInput.value, 10) : 0;
+
+  if (!duration || duration < 1) {
+    duration = 1;
+    if (durationInput) durationInput.value = '1';
+  }
+
+  await sendCommand('/pump/on?duration=' + encodeURIComponent(duration));
 }
 
 /* ==========================================

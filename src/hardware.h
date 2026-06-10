@@ -30,6 +30,11 @@ extern String jemuranState;    // IN / OUT
 // Mode sistem
 extern bool manualMode;        // true = MANUAL, false = AUTO
 
+// Timer pompa manual
+extern bool pumpTimerActive;
+extern unsigned long pumpTimerStart;
+extern unsigned long pumpTimerDuration;
+
 // ======================================================
 // SETUP & UPDATE
 // ======================================================
@@ -59,6 +64,9 @@ void updateSensorStatus();
 
 // Kontrol pompa
 void setPump(bool on);
+void startPumpTimer(unsigned long durationSeconds);
+void cancelPumpTimer();
+unsigned long getPumpTimeRemaining();
 
 // Kontrol jemuran
 void setJemuranIn();

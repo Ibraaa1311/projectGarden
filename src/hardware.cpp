@@ -30,8 +30,15 @@ String jemuranState = STATUS_OUT;
 // Mode sistem
 bool manualMode = false;
 
+// Timer pompa manual
+bool pumpTimerActive = false;
+unsigned long pumpTimerStart = 0;
+unsigned long pumpTimerDuration = 0;
+
 // Object servo
 Servo jemuran;
+
+static void updatePumpTimer();
 
 // ======================================================
 // SETUP HARDWARE
@@ -68,6 +75,8 @@ void hardwareUpdate() {
   // 4. Jalankan otomatisasi jika AUTO mode
   if (!manualMode) {
     runAutomation();
+  } else {
+    updatePumpTimer();
   }
 }
 
@@ -128,6 +137,37 @@ void setPump(bool on) {
   pumpState = on ? STATUS_ON : STATUS_OFF;
 }
 
+void startPumpTimer(unsigned long durationSeconds) {
+  if (!manualMode || durationSeconds == 0) {
+    cancelPumpTimer();
+    return;
+  }
+
+  pumpTimerDuration = durationSeconds * 1000UL;
+  pumpTimerStart = millis();
+  pumpTimerActive = true;
+}
+
+void cancelPumpTimer() {
+  pumpTimerActive = false;
+  pumpTimerStart = 0;
+  pumpTimerDuration = 0;
+}
+
+unsigned long getPumpTimeRemaining() {
+  if (!pumpTimerActive || pumpTimerDuration == 0) {
+    return 0;
+  }
+
+  unsigned long elapsed = millis() - pumpTimerStart;
+  if (elapsed >= pumpTimerDuration) {
+    return 0;
+  }
+
+  unsigned long remainingMs = pumpTimerDuration - elapsed;
+  return (remainingMs + 999UL) / 1000UL;
+}
+
 void setJemuranIn() {
   jemuran.write(SERVO_IN_ANGLE);
   jemuranState = STATUS_IN;
@@ -147,6 +187,7 @@ void setManualMode() {
 
 void setAutoMode() {
   manualMode = false;
+  cancelPumpTimer();
 }
 
 // ======================================================
@@ -169,6 +210,17 @@ void runAutomation() {
     setJemuranIn();
   } else {
     setJemuranOut();
+  }
+}
+
+static void updatePumpTimer() {
+  if (!pumpTimerActive) {
+    return;
+  }
+
+  if (getPumpTimeRemaining() == 0) {
+    setPump(false);
+    cancelPumpTimer();
   }
 }
 

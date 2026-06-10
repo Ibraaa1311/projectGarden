@@ -179,6 +179,10 @@ void handleApiStatus() {
   json += "\"rainStatus\":\"" + rainStatus + "\",";
   json += "\"pumpState\":\"" + pumpState + "\",";
   json += "\"jemuranState\":\"" + jemuranState + "\",";
+  json += "\"pumpTimerActive\":";
+  json += (pumpTimerActive ? "true" : "false");
+  json += ",";
+  json += "\"pumpTimeRemaining\":" + String(getPumpTimeRemaining()) + ",";
   json += "\"uptime\":\"" + getUptimeString() + "\",";
   json += "\"manualMode\":";
   json += (manualMode ? "true" : "false");
@@ -209,6 +213,13 @@ void handlePumpOn() {
   setManualMode();
   setPump(true);
 
+  unsigned long durationMinutes = server.arg("duration").toInt();
+  if (durationMinutes > 0) {
+    startPumpTimer(durationMinutes * 60UL);
+  } else {
+    cancelPumpTimer();
+  }
+
   sendText("Pompa ON");
 }
 
@@ -217,6 +228,7 @@ void handlePumpOff() {
 
   setManualMode();
   setPump(false);
+  cancelPumpTimer();
 
   sendText("Pompa OFF");
 }
