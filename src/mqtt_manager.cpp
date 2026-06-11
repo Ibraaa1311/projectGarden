@@ -32,6 +32,12 @@ const char* TOPIC_SOIL_STATE =
 const char* TOPIC_RAIN_STATE =
   "smarthome/pagi/taman/hujan/state";
 
+// SENSOR HEALTH
+const char* TOPIC_SOIL_HEALTH =
+  "smarthome/pagi/taman/tanah/health";
+
+const char* TOPIC_RAIN_HEALTH =
+  "smarthome/pagi/taman/hujan/health";
 
 // ACTUATOR STATE
 const char* TOPIC_PUMP_STATE =
@@ -50,6 +56,22 @@ const char* TOPIC_JEMURAN_SET =
 const char* TOPIC_FIRE_STATE =
   "smarthome/dapur/api/state";
 
+// ========================================
+// PREVIOUS STATE (untuk deteksi perubahan)
+// ========================================
+static String prev_soilStatus   = "";
+static String prev_rainStatus   = "";
+static String prev_pumpState    = "";
+static String prev_jemuranState = "";
+static int    prev_soilConnected  = -1;
+static int    prev_rainConnected  = -1;
+
+// Timestamp saat terakhir connect ke MQTT.
+// Pesan retained dari broker tiba dalam milidetik pertama
+// setelah subscribe — kita abaikan command selama
+// MQTT_RETAIN_IGNORE_MS setelah connect.
+static unsigned long mqttConnectedAt      = 0;
+#define MQTT_RETAIN_IGNORE_MS 2000UL
 
 // ========================================
 // MQTT CALLBACK
@@ -78,6 +100,12 @@ void mqttCallback(char* topic,
   // ====================================
   if (topicStr == TOPIC_PUMP_SET) {
 
+    // Abaikan retained message yang datang saat baru connect
+    if (millis() - mqttConnectedAt < MQTT_RETAIN_IGNORE_MS) {
+      Serial.println("[MQTT] Ignored retained message (pump)");
+      return;
+    }
+
     setManualMode();
 
     if (message == "ON") {
@@ -95,6 +123,12 @@ void mqttCallback(char* topic,
   // JEMURAN CONTROL
   // ====================================
   else if (topicStr == TOPIC_JEMURAN_SET) {
+
+    // Abaikan retained message yang datang saat baru connect
+    if (millis() - mqttConnectedAt < MQTT_RETAIN_IGNORE_MS) {
+      Serial.println("[MQTT] Ignored retained message (jemuran)");
+      return;
+    }
 
     setManualMode();
 
@@ -126,6 +160,14 @@ void mqttCallback(char* topic,
 
       Serial.println("Emergency System Activated");
     }
+    else if (message == "SAFE") {
+      Serial.println("Environment SAFE");
+
+      // Kembali ke auto mode
+      setAutoMode();
+
+      Serial.println("Auto Mode Restored");
+    }
 
   }
 
@@ -153,6 +195,18 @@ void reconnectMQTT() {
     if (connected) {
 
       Serial.println("MQTT Connected");
+
+      // Reset state cache supaya semua topic langsung
+      // di-publish ulang ke broker setelah reconnect
+      prev_soilStatus   = "";
+      prev_rainStatus   = "";
+      prev_pumpState    = "";
+      prev_jemuranState = "";
+      prev_soilConnected  = -1;
+      prev_rainConnected  = -1;
+
+      // Catat waktu connect untuk filter retained message
+      mqttConnectedAt = millis();
 
       // ================================
       // SUBSCRIBE TOPICS
@@ -218,46 +272,79 @@ void mqttPublishStatus() {
     return;
   }
 
-  // ====================================
-  // TANAH
-  // ====================================
-  mqttClient.publish(
-    TOPIC_SOIL_STATE,
-    soilStatus.c_str(),
-    true
-  );
+  bool anyChange = false;
 
   // ====================================
-  // HUJAN
+  // TANAH STATE
   // ====================================
-  mqttClient.publish(
-    TOPIC_RAIN_STATE,
-    rainStatus.c_str(),
-    true
-  );
-  
+  if (soilStatus != prev_soilStatus) {
+    mqttClient.publish(TOPIC_SOIL_STATE, soilStatus.c_str(), true);
+    Serial.print("[MQTT] Tanah : ");
+    Serial.println(soilStatus);
+    prev_soilStatus = soilStatus;
+    anyChange = true;
+  }
+
+  // ====================================
+  // TANAH HEALTH
+  // ====================================
+  int soilConn = soilConnected ? 1 : 0;
+  if (soilConn != prev_soilConnected) {
+    mqttClient.publish(TOPIC_SOIL_HEALTH, soilConnected ? "OK" : "DISCONNECT", true);
+    Serial.print("[MQTT] Tanah Health : ");
+    Serial.println(soilConnected ? "OK" : "DISCONNECT");
+    prev_soilConnected = soilConn;
+    anyChange = true;
+  }
+
+  // ====================================
+  // HUJAN STATE
+  // ====================================
+  if (rainStatus != prev_rainStatus) {
+    mqttClient.publish(TOPIC_RAIN_STATE, rainStatus.c_str(), true);
+    Serial.print("[MQTT] Hujan : ");
+    Serial.println(rainStatus);
+    prev_rainStatus = rainStatus;
+    anyChange = true;
+  }
+
+  // ====================================
+  // HUJAN HEALTH
+  // ====================================
+  int rainConn = rainConnected ? 1 : 0;
+  if (rainConn != prev_rainConnected) {
+    mqttClient.publish(TOPIC_RAIN_HEALTH, rainConnected ? "OK" : "DISCONNECT", true);
+    Serial.print("[MQTT] Hujan Health : ");
+    Serial.println(rainConnected ? "OK" : "DISCONNECT");
+    prev_rainConnected = rainConn;
+    anyChange = true;
+  }
+
+  // ====================================
   // PUMP STATE
-  mqttClient.publish(
-    TOPIC_PUMP_STATE,
-    pumpState.c_str(),
-    true
-  );
-  
+  // ====================================
+  if (pumpState != prev_pumpState) {
+    mqttClient.publish(TOPIC_PUMP_STATE, pumpState.c_str(), true);
+    Serial.print("[MQTT] Pompa : ");
+    Serial.println(pumpState);
+    prev_pumpState = pumpState;
+    anyChange = true;
+  }
+
+  // ====================================
   // JEMURAN STATE
-  mqttClient.publish(
-    TOPIC_JEMURAN_STATE,
-    jemuranState.c_str(),
-    true
-  );
+  // ====================================
+  if (jemuranState != prev_jemuranState) {
+    mqttClient.publish(TOPIC_JEMURAN_STATE, jemuranState.c_str(), true);
+    Serial.print("[MQTT] Jemuran : ");
+    Serial.println(jemuranState);
+    prev_jemuranState = jemuranState;
+    anyChange = true;
+  }
 
-
-  Serial.println("MQTT Status Published");
-
-  Serial.print("Tanah : ");
-  Serial.println(soilStatus);
-
-  Serial.print("Hujan : ");
-  Serial.println(rainStatus);
+  if (anyChange) {
+    Serial.println("[MQTT] Publish selesai.");
+  }
 }
 
 // ========================================

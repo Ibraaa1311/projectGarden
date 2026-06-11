@@ -14,7 +14,6 @@
 // Nilai mentah sensor
 extern int soilValue;
 extern int rainValue;
-extern int rainDigitalValue;
 
 // Persentase sensor (0 - 100)
 extern int soilPercent;
@@ -23,6 +22,10 @@ extern int rainPercent;
 // Status sensor
 extern String soilStatus;      // DRY / WET
 extern String rainStatus;      // RAINING / CLEAR
+
+// Health sensor (koneksi fisik)
+extern bool soilConnected;     // true = terhubung, false = disconnect/rusak
+extern bool rainConnected;     // true = terhubung, false = disconnect/rusak
 
 // Status aktuator
 extern String pumpState;       // ON / OFF
@@ -58,6 +61,10 @@ void calculatePercentages();
 
 // Menentukan status DRY/WET dan RAINING/CLEAR
 void updateSensorStatus();
+
+// Mendeteksi apakah sensor terhubung secara fisik
+// (berdasarkan pola nilai ADC — stuck di 0 atau 4095 = disconnect)
+void checkSensorHealth();
 
 // ======================================================
 // ACTUATOR FUNCTIONS

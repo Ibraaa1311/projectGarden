@@ -657,6 +657,65 @@ button:disabled {
   color: #92400e;
 }
 
+/* ================= SENSOR DISCONNECT ================= */
+.sensor-disconnect-banner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.sensor-disconnect-banner svg {
+  flex-shrink: 0;
+}
+
+.sensor-disconnect-banner.visible {
+  display: flex;
+}
+
+.status-card.sensor-error {
+  border: 2px solid #fca5a5;
+}
+
+.status-card.sensor-error .status-card-top {
+  border-top-color: #ef4444 !important;
+}
+
+.sensor-health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-top: 6px;
+}
+
+.sensor-health-badge.ok {
+  background: #d4e8df;
+  color: #1b6b3d;
+}
+
+.sensor-health-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+  animation: pulse-badge 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
 /* ================= FORM ================= */
 form {
   display: grid;
@@ -812,25 +871,36 @@ tr:hover {
   }
 
   .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    padding: 14px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 16px;
   }
 
   .header-brand {
-    justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
+    gap: 8px;
+  }
+
+  .header-brand svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .header-device {
+    display: none;
   }
 
   .header-actions {
-    width: 100%;
-    justify-content: center;
+    width: auto;
+    justify-content: flex-end;
   }
 
   .header-link {
-    flex: 1;
-    text-align: center;
+    flex: none;
+    padding: 6px 14px;
+    font-size: 13px;
   }
 
   .container {
@@ -880,27 +950,61 @@ tr:hover {
   }
 
   .status-card {
-    padding: 18px;
+    padding: 16px 18px;
+  }
+
+  .status-card-title {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+
+  .status-card-top {
+    margin: -16px -18px 14px -18px;
   }
 
   .status-content {
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    text-align: center;
+    flex-wrap: nowrap;
+    text-align: left;
+    gap: 12px;
   }
 
   .status-icon {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .status-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .status-label {
+    font-size: 16px;
+  }
+
+  .status-text {
+    font-size: 12px;
+    color: #888;
+  }
+
+  .sensor-health-badge {
+    margin-top: 4px;
+    font-size: 10px;
+    padding: 3px 8px;
   }
 
   .status-percent {
-    width: 80px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
+    border-width: 5px;
+    flex-shrink: 0;
   }
 
   .status-percent-value {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   /* ================= CONTROL ================= */
@@ -911,6 +1015,11 @@ tr:hover {
 
   .mode-card-content {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #modeBadge {
+    justify-content: center;
   }
 
   .control-card {
@@ -918,22 +1027,23 @@ tr:hover {
   }
 
   .button-group {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .timer-info {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   button {
     width: 100%;
-    padding: 14px;
-    font-size: 13px;
+    padding: 18px 10px;
+    font-size: 12px;
   }
 
   button svg {
-    width: 24px !important;
-    height: 24px !important;
+    width: 28px !important;
+    height: 28px !important;
   }
 
   /* ================= INFO SYSTEM ================= */
@@ -944,15 +1054,21 @@ tr:hover {
   }
 
   /* paksa info system jadi vertikal */
-  div[style*="grid-template-columns:repeat(4,1fr)"] {
+  div[style*="grid-template-columns:repeat(4,1fr)"],
+  div[style*="grid-template-columns:repeat(3,1fr)"] {
     grid-template-columns: 1fr !important;
-    gap: 16px !important;
+    gap: 12px !important;
   }
 
   div[style*="border-right:1px solid #f0f0f0"] {
     border-right: none !important;
     border-bottom: 1px solid #eee;
     padding: 0 0 12px 0 !important;
+  }
+
+  div[style*="border-right:1px solid #f0f0f0"]:last-child {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
   }
 
   /* ================= TABLE ================= */
@@ -1203,7 +1319,13 @@ String getDashboardSectionHTML() {
 
   html += "<section class='section' id='dashboard'>";
   html += "<div class='main-header'>";
+  html += "<div style='display:flex;align-items:center;justify-content:space-between;'>";
   html += "<h1>Dashboard</h1>";
+  html += "<span style='font-size:13px;color:#999;display:flex;align-items:center;gap:5px;'>";
+  html += "<svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='#bbb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>";
+  html += "<span id='dashTime'>--:--:--</span>";
+  html += "</span>";
+  html += "</div>";
   html += "</div>";
 
   // Status Cards
@@ -1218,10 +1340,18 @@ String getDashboardSectionHTML() {
   html += "<div class='status-info'>";
   html += "<div class='status-label' id='soilStatus' style='color:#f9a850; font-weight:600;'>DRY</div>";
   html += "<div class='status-text'>Tanah kering, Siram tanaman diperlukan</div>";
+  html += "<div class='sensor-health-badge ok' id='soilHealthBadge'>";
+  html += "<svg viewBox='0 0 24 24' width='10' height='10' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'><polyline points='20 6 9 17 4 12'/></svg>";
+  html += "<span id='soilHealthText'>SENSOR OK</span>";
+  html += "</div>";
   html += "</div>";
   html += "<div class='status-percent' style='border-color:#f9a850;'>";
   html += "<div class='status-percent-value' id='soilPercent'>15%</div>";
   html += "</div>";
+  html += "</div>";
+  html += "<div class='sensor-disconnect-banner' id='soilDisconnectBanner'>";
+  html += "<svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>";
+  html += "Sensor tanah tidak terdeteksi! Periksa kabel dan koneksi.";
   html += "</div>";
   html += "</div>";
 
@@ -1234,10 +1364,18 @@ String getDashboardSectionHTML() {
   html += "<div class='status-info'>";
   html += "<div class='status-label' id='rainStatus' style='color:#3b82f6; font-weight:600;'>CLEAR</div>";
   html += "<div class='status-text'>Tidak ada hujan, Cuaca cerah</div>";
+  html += "<div class='sensor-health-badge ok' id='rainHealthBadge'>";
+  html += "<svg viewBox='0 0 24 24' width='10' height='10' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'><polyline points='20 6 9 17 4 12'/></svg>";
+  html += "<span id='rainHealthText'>SENSOR OK</span>";
+  html += "</div>";
   html += "</div>";
   html += "<div class='status-percent' style='border-color:#3b82f6;'>";
   html += "<div class='status-percent-value' id='rainPercent'>0%</div>";
   html += "</div>";
+  html += "</div>";
+  html += "<div class='sensor-disconnect-banner' id='rainDisconnectBanner'>";
+  html += "<svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>";
+  html += "Sensor hujan tidak terdeteksi! Periksa kabel dan koneksi.";
   html += "</div>";
   html += "</div>";
 
@@ -1709,6 +1847,35 @@ function getSoilIcon(status) {
       const wifiUptime = document.getElementById('wifiUptime');
       if (wifiUptime) wifiUptime.textContent = data.uptime;
     }
+
+    // ── Sensor Health ──────────────────────────────────
+    function applySensorHealth(connected, cardId, badgeId, textId, bannerId) {
+      const card   = document.getElementById(cardId);
+      const badge  = document.getElementById(badgeId);
+      const text   = document.getElementById(textId);
+      const banner = document.getElementById(bannerId);
+      if (!card) return;
+      if (connected) {
+        card.classList.remove('sensor-error');
+        if (badge)  badge.className  = 'sensor-health-badge ok';
+        if (text)   text.textContent  = 'SENSOR OK';
+        if (banner) banner.classList.remove('visible');
+      } else {
+        card.classList.add('sensor-error');
+        if (badge)  badge.className  = 'sensor-health-badge error';
+        if (text)   text.textContent  = 'DISCONNECT!';
+        if (banner) banner.classList.add('visible');
+      }
+    }
+
+    applySensorHealth(
+      data.soilConnected !== false,
+      'soilCard', 'soilHealthBadge', 'soilHealthText', 'soilDisconnectBanner'
+    );
+    applySensorHealth(
+      data.rainConnected !== false,
+      'rainCard', 'rainHealthBadge', 'rainHealthText', 'rainDisconnectBanner'
+    );
   } catch (error) {
     console.log(error);
   }
@@ -1753,10 +1920,17 @@ function updateCurrentTime() {
     second: '2-digit'
   });
 
+  const timeShort = now.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
   const timeEl = document.getElementById('currentTime');
-  if (timeEl) {
-    timeEl.textContent = timeStr;
-  }
+  if (timeEl) timeEl.textContent = timeStr;
+
+  const dashTime = document.getElementById('dashTime');
+  if (dashTime) dashTime.textContent = timeShort;
 }
 
 /* ==========================================

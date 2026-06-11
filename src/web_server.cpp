@@ -7,6 +7,7 @@
 
 #include <WebServer.h>
 #include <Preferences.h>
+#include <esp_system.h>
 
 #include "config.h"
 #include "hardware.h"
@@ -23,25 +24,126 @@ static Preferences sessionPrefs;
 // ======================================================
 // AUTHENTICATION HELPERS
 // ======================================================
-bool isAuthenticated() {
-  sessionPrefs.begin(PREF_SESSION_NAMESPACE, true);
-  String token =
-      sessionPrefs.getString(PREF_KEY_SESSION_TOKEN, "");
-  sessionPrefs.end();
+static String makeSessionKey(int index) {
+  return "s" + String(index);
+}
 
-  return token == "logged_in";
+static String buildSessionCookie(const String &token) {
+  String cookie = String(SESSION_COOKIE_NAME) + "=" + token;
+  cookie += "; Path=/; Max-Age=" + String(SESSION_TIMEOUT / 1000UL);
+  cookie += "; HttpOnly; SameSite=Lax";
+  return cookie;
+}
+
+static String buildExpiredSessionCookie() {
+  return String(SESSION_COOKIE_NAME) +
+         "=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax";
+}
+
+static String getSessionCookieToken() {
+  String cookies = server.header("Cookie");
+  String cookieName = String(SESSION_COOKIE_NAME) + "=";
+  int start = cookies.indexOf(cookieName);
+
+  if (start < 0) {
+    return "";
+  }
+
+  start += cookieName.length();
+  int end = cookies.indexOf(';', start);
+  if (end < 0) {
+    end = cookies.length();
+  }
+
+  String token = cookies.substring(start, end);
+  token.trim();
+  return token;
+}
+
+static String generateSessionToken() {
+  char token[25];
+  snprintf(token, sizeof(token), "%08lx%08lx%08lx",
+           (unsigned long)esp_random(),
+           (unsigned long)esp_random(),
+           (unsigned long)millis());
+  return String(token);
+}
+
+bool isAuthenticated() {
+  String browserToken = getSessionCookieToken();
+
+  if (browserToken.length() == 0) {
+    return false;
+  }
+
+  sessionPrefs.begin(PREF_SESSION_NAMESPACE, true);
+  int count = sessionPrefs.getInt("count", 0);
+
+  for (int i = 0; i < count; i++) {
+    String storedToken =
+        sessionPrefs.getString(makeSessionKey(i).c_str(), "");
+
+    if (storedToken == browserToken) {
+      sessionPrefs.end();
+      server.sendHeader("Set-Cookie", buildSessionCookie(browserToken));
+      return true;
+    }
+  }
+
+  sessionPrefs.end();
+  return false;
 }
 
 void createSession() {
+  String token = generateSessionToken();
+
   sessionPrefs.begin(PREF_SESSION_NAMESPACE, false);
-  sessionPrefs.putString(PREF_KEY_SESSION_TOKEN, "logged_in");
+  int count = sessionPrefs.getInt("count", 0);
+
+  if (count >= MAX_WEB_SESSIONS) {
+    for (int i = 1; i < count; i++) {
+      String existingToken =
+          sessionPrefs.getString(makeSessionKey(i).c_str(), "");
+      sessionPrefs.putString(makeSessionKey(i - 1).c_str(), existingToken);
+    }
+
+    count = MAX_WEB_SESSIONS - 1;
+  }
+
+  sessionPrefs.putString(makeSessionKey(count).c_str(), token);
+  sessionPrefs.putInt("count", count + 1);
   sessionPrefs.end();
+
+  server.sendHeader("Set-Cookie", buildSessionCookie(token));
 }
 
 void destroySession() {
+  String browserToken = getSessionCookieToken();
+
   sessionPrefs.begin(PREF_SESSION_NAMESPACE, false);
-  sessionPrefs.remove(PREF_KEY_SESSION_TOKEN);
+  int count = sessionPrefs.getInt("count", 0);
+
+  for (int i = 0; i < count; i++) {
+    String storedToken =
+        sessionPrefs.getString(makeSessionKey(i).c_str(), "");
+
+    if (storedToken != browserToken) {
+      continue;
+    }
+
+    for (int j = i; j < count - 1; j++) {
+      String nextToken =
+          sessionPrefs.getString(makeSessionKey(j + 1).c_str(), "");
+      sessionPrefs.putString(makeSessionKey(j).c_str(), nextToken);
+    }
+
+    sessionPrefs.remove(makeSessionKey(count - 1).c_str());
+    sessionPrefs.putInt("count", count - 1);
+    break;
+  }
+
   sessionPrefs.end();
+  server.sendHeader("Set-Cookie", buildExpiredSessionCookie());
 }
 
 // ======================================================
@@ -64,6 +166,9 @@ static void sendText(const String &text) {
 // SETUP & LOOP
 // ======================================================
 void webServerSetup() {
+  const char *headerKeys[] = {"Cookie"};
+  server.collectHeaders(headerKeys, 1);
+
   // Pages
   server.on("/", handleRoot);
   server.on("/login", HTTP_GET, handleLoginPage);
@@ -93,6 +198,8 @@ void webServerSetup() {
 
   // 404
   server.onNotFound([]() {
+    if (!requireAuth()) return;
+
     server.send(404, "text/plain", "404 Not Found");
   });
 
@@ -174,9 +281,11 @@ void handleApiStatus() {
   json += "\"soilValue\":" + String(soilValue) + ",";
   json += "\"soilPercent\":" + String(soilPercent) + ",";
   json += "\"soilStatus\":\"" + soilStatus + "\",";
+  json += "\"soilConnected\":" + String(soilConnected ? "true" : "false") + ",";
   json += "\"rainValue\":" + String(rainValue) + ",";
   json += "\"rainPercent\":" + String(rainPercent) + ",";
   json += "\"rainStatus\":\"" + rainStatus + "\",";
+  json += "\"rainConnected\":" + String(rainConnected ? "true" : "false") + ",";
   json += "\"pumpState\":\"" + pumpState + "\",";
   json += "\"jemuranState\":\"" + jemuranState + "\",";
   json += "\"pumpTimerActive\":";
@@ -211,17 +320,13 @@ void handlePumpOn() {
   if (!requireAuth()) return;
 
   setManualMode();
+  setPump(true);
 
-  unsigned long durationMinutes = 0;
-  if (server.hasArg("duration")) {
-    durationMinutes = server.arg("duration").toInt();
-  }
-
+  unsigned long durationMinutes = server.arg("duration").toInt();
   if (durationMinutes > 0) {
     startPumpTimer(durationMinutes * 60UL);
   } else {
     cancelPumpTimer();
-    setPump(true);
   }
 
   sendText("Pompa ON");

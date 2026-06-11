@@ -51,6 +51,8 @@
 // SESSION CONFIGURATION
 // ======================================================
 #define SESSION_TIMEOUT 1800000UL   // 30 menit
+#define SESSION_COOKIE_NAME "miniGardenSession"
+#define MAX_WEB_SESSIONS 5
 
 // ======================================================
 // USER CONFIGURATION
@@ -69,6 +71,20 @@
 // UI CONFIGURATION
 // ======================================================
 #define DASHBOARD_REFRESH_INTERVAL 1000   // 1 detik (AJAX polling)
+
+// ======================================================
+// SENSOR HEALTH DETECTION
+// ======================================================
+// Jumlah sampel untuk mendeteksi sensor disconnect
+#define SENSOR_SAMPLE_COUNT       5
+
+// Selisih max-min ADC dalam satu burst sampel.
+// Floating pin (kabel lepas) → loncat ratusan–ribuan count
+// Sensor terpasang normal    → variansi < ~80 count
+// Nilai 150 memberikan margin aman di tengah-tengah.
+// Turunkan jika sensor kamu sangat noise; naikkan jika terlalu
+// sering false-positive.
+#define SENSOR_VARIANCE_THRESHOLD 150
 
 // ======================================================
 // HARDWARE LOGIC
