@@ -79,9 +79,6 @@ void handleJemurOut();
 // GET /auto
 void handleAutoMode();
 
-// GET /sensor/reset
-void handleSensorReset();
-
 // ======================================================
 // WIFI HANDLERS
 // ======================================================
