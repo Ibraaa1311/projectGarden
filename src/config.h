@@ -28,7 +28,9 @@
 
 // Soil:
 // 0-50% = DRY, 50-100% = WET
-#define SOIL_THRESHOLD 2000
+#define SOIL_THRESHOLD 2700
+#define SOIL_DRY_ADC 3200
+#define SOIL_WET_ADC 1400
 
 // Rain (paling sensitif):
 // nilai <= RAIN_THRESHOLD = RAINING
@@ -97,7 +99,7 @@
 
 // Posisi servo
 #define SERVO_IN_ANGLE   0     // Jemuran masuk
-#define SERVO_OUT_ANGLE  90   // Jemuran keluar
+#define SERVO_OUT_ANGLE  180   // Jemuran keluar
 
 // ======================================================
 // NAMESPACE / STORAGE KEYS

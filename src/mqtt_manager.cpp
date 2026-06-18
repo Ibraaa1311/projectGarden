@@ -54,7 +54,7 @@ const char* TOPIC_JEMURAN_SET =
   "smarthome/pagi/taman/jemuran/set";
 
 const char* TOPIC_FIRE_STATE =
-  "smarthome/dapur/api/state";
+  "smarthome/pagi/dapur/api/state";
 
 // ========================================
 // PREVIOUS STATE (untuk deteksi perubahan)

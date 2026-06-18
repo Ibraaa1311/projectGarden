@@ -107,7 +107,7 @@ void calculatePercentages() {
   // Soil:
   // Nilai tinggi = DRY (100%)
   // Nilai rendah = WET (0%)
-  soilPercent = map(soilValue, 0, 4095, 0, 100);
+  soilPercent = map(soilValue, SOIL_DRY_ADC, SOIL_WET_ADC, 0, 100);
   soilPercent = constrain(soilPercent, 0, 100);
 
   // Rain:
