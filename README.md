@@ -81,7 +81,7 @@ Subscribe:
 
 * smarthome/pagi/taman/pompa/set
 * smarthome/pagi/taman/jemuran/set
-* smarthome/dapur/api/state
+* smarthome/pagi/dapur/api/state
 
 ---
 
