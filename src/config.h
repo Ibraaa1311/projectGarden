@@ -24,18 +24,17 @@
 // ======================================================
 // SENSOR THRESHOLDS
 // ======================================================
-// Sesuaikan berdasarkan hasil kalibrasi sensor
 
 // Soil:
-// 0-50% = DRY, 50-100% = WET
+// nilai <= SOIL_THRESHOLD = DRY
+// nilai > SOIL_THRESHOLD = WET
 #define SOIL_THRESHOLD 2700
 #define SOIL_DRY_ADC 3200
 #define SOIL_WET_ADC 1400
 
-// Rain (paling sensitif):
+// Rain:
 // nilai <= RAIN_THRESHOLD = RAINING
 // nilai > RAIN_THRESHOLD = CLEAR
-// Set tinggi agar sedikit air sudah dianggap hujan
 #define RAIN_THRESHOLD 4000
 
 // ======================================================
@@ -83,15 +82,12 @@
 // Selisih max-min ADC dalam satu burst sampel.
 // Floating pin (kabel lepas) → loncat ratusan–ribuan count
 // Sensor terpasang normal    → variansi < ~80 count
-// Nilai 150 memberikan margin aman di tengah-tengah.
-// Turunkan jika sensor kamu sangat noise; naikkan jika terlalu
-// sering false-positive.
 #define SENSOR_VARIANCE_THRESHOLD 150
 
 // ======================================================
 // HARDWARE LOGIC
 // ======================================================
-// Relay pompa pada rangkaian kamu:
+// Relay pompa:
 // HIGH = ON
 // LOW  = OFF
 #define PUMP_ON_LEVEL  HIGH

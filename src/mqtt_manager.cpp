@@ -66,10 +66,7 @@ static String prev_jemuranState = "";
 static int    prev_soilConnected  = -1;
 static int    prev_rainConnected  = -1;
 
-// Timestamp saat terakhir connect ke MQTT.
-// Pesan retained dari broker tiba dalam milidetik pertama
-// setelah subscribe — kita abaikan command selama
-// MQTT_RETAIN_IGNORE_MS setelah connect.
+// Timestamp saat terakhir connect ke MQTT (untuk filter retained message)
 static unsigned long mqttConnectedAt      = 0;
 #define MQTT_RETAIN_IGNORE_MS 2000UL
 

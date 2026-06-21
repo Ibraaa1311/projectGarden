@@ -63,7 +63,6 @@ void calculatePercentages();
 void updateSensorStatus();
 
 // Mendeteksi apakah sensor terhubung secara fisik
-// (berdasarkan pola nilai ADC — stuck di 0 atau 4095 = disconnect)
 void checkSensorHealth();
 
 // ======================================================

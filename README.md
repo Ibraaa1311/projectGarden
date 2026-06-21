@@ -95,6 +95,8 @@ Subscribe:
 * Relay Module
 * Water Pump
 * Servo Motor
+* MB102 Power Supply
+* Kabel Jumper
 
 ### Software
 
@@ -196,6 +198,6 @@ http://<IP-ESP32>
 
 ## Author
 
-Muhammad Ibra Aidil Akbar
+Kelompok 3 👨🏼‍💻
 
 Teknik Informatika – Computer Networking

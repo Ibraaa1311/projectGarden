@@ -98,21 +98,12 @@ void readSensors() {
 // ======================================================
 // CALCULATE PERCENTAGES
 // ======================================================
-//
-// Catatan:
-// - ADC ESP32 berkisar 0 - 4095
-// - Persentase di sini hanya estimasi visual
-//
 void calculatePercentages() {
   // Soil:
-  // Nilai tinggi = DRY (100%)
-  // Nilai rendah = WET (0%)
   soilPercent = map(soilValue, SOIL_DRY_ADC, SOIL_WET_ADC, 0, 100);
   soilPercent = constrain(soilPercent, 0, 100);
 
   // Rain:
-  // Nilai rendah = hujan deras (100%)
-  // Nilai tinggi = tidak hujan (0%)
   rainPercent = map(rainValue, 4095, 0, 0, 100);
   rainPercent = constrain(rainPercent, 0, 100);
 }
@@ -120,24 +111,8 @@ void calculatePercentages() {
 // ======================================================
 // SENSOR HEALTH CHECK
 // ======================================================
-//
-// Cara kerja:
-// - Pin floating (kabel lepas) → ADC tidak stabil, naik-turun
-//   ekstrem dalam waktu sangat singkat (variansi TINGGI)
-// - Sensor terpasang normal → ADC relatif stabil, variansi kecil
-//   meskipun nilainya mendekati 0 atau 4095
-//
-// Khusus rain sensor:
-// - Nilai ADC tinggi (mendekati 4095) saat kering = NORMAL
-//   karena memang tidak ada air → tidak dianggap disconnect
-// - Yang dicek hanya apakah variansi antar sampel terlalu besar
-//
-// Threshold variansi (SENSOR_VARIANCE_THRESHOLD):
-// - Didapat dari selisih max-min dalam satu burst sampel
-// - Floating pin biasanya loncat ratusan hingga ribuan ADC count
-//   dalam hitungan milidetik
-// - Sensor terpasang biasanya variansi < 100 ADC count
-//
+// Cek apakah pin sensor "floating" (lepas) dengan mengukur variansi ADC dalam beberapa sampel.
+// Jika variansi tinggi, kemungkinan pin lepas → sensor disconnect atau rusak.
 static bool isFloatingPin(uint8_t pin) {
   int samples[SENSOR_SAMPLE_COUNT];
   for (int i = 0; i < SENSOR_SAMPLE_COUNT; i++) {
@@ -165,8 +140,6 @@ void checkSensorHealth() {
   }
 
   // --- Rain Sensor ---
-  // Nilai ADC tinggi (kering) = normal, jangan dianggap error.
-  // Cukup cek variansi saja.
   rainConnected = !isFloatingPin(RAIN_PIN);
   if (!rainConnected) {
     Serial.println("[WARN] Rain sensor DISCONNECT atau RUSAK!");
@@ -177,14 +150,14 @@ void checkSensorHealth() {
 // UPDATE STATUS
 // ======================================================
 void updateSensorStatus() {
-  // Soil status berdasarkan persentase
-  if (soilPercent < 50) {
+  // Soil status
+  if (soilPercent < 35) {
     soilStatus = STATUS_DRY;
   } else {
     soilStatus = STATUS_WET;
   }
 
-  // Rain status dengan sensitivitas paling tinggi
+  // Rain status
   if (rainValue <= RAIN_THRESHOLD) {
     rainStatus = STATUS_RAINING;
   } else {
@@ -195,6 +168,7 @@ void updateSensorStatus() {
 // ======================================================
 // ACTUATOR CONTROL
 // ======================================================
+// Pompa:
 void setPump(bool on) {
   digitalWrite(RELAY_PUMP, on ? PUMP_ON_LEVEL : PUMP_OFF_LEVEL);
   pumpState = on ? STATUS_ON : STATUS_OFF;
@@ -231,11 +205,13 @@ unsigned long getPumpTimeRemaining() {
   return (remainingMs + 999UL) / 1000UL;
 }
 
+// Jemuran Masuk:
 void setJemuranIn() {
   jemuran.write(SERVO_IN_ANGLE);
   jemuranState = STATUS_IN;
 }
 
+// Jemuran Keluar:
 void setJemuranOut() {
   jemuran.write(SERVO_OUT_ANGLE);
   jemuranState = STATUS_OUT;
@@ -260,7 +236,7 @@ void runAutomation() {
   // Pompa:
   // Tanah kering -> ON
   // Tanah basah  -> OFF
-  // Sensor rusak -> OFF (safe default, hindari banjir)
+  // Sensor rusak -> OFF
   if (!soilConnected) {
     setPump(false);
   } else if (soilStatus == STATUS_DRY) {
@@ -272,7 +248,7 @@ void runAutomation() {
   // Jemuran:
   // Hujan        -> IN
   // Cerah        -> OUT
-  // Sensor rusak -> IN (safe default, hindari kehujanan)
+  // Sensor rusak -> IN
   if (!rainConnected) {
     setJemuranIn();
   } else if (rainStatus == STATUS_RAINING) {
