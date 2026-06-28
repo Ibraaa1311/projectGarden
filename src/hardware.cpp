@@ -151,7 +151,7 @@ void checkSensorHealth() {
 // ======================================================
 void updateSensorStatus() {
   // Soil status
-  if (soilPercent < 35) {
+  if (soilPercent < 50) {
     soilStatus = STATUS_DRY;
   } else {
     soilStatus = STATUS_WET;
